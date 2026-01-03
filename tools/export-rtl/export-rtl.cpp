@@ -1266,6 +1266,22 @@ LogicalResult SMVWriter::createProperties(WriteModData &data) const {
           llvm::formatv("count({0}) < {1}", llvm::join(outNames, ", "), numOut)
               .str();
       data.properties[p->getId()] = {propertyString, propertyTag};
+    } else if (auto *p = llvm::dyn_cast<Invariant2>(property.get())) {
+      unsigned numOut = p->getNumEagerForkOutputs();
+      std::string forkName = p->getForkOp();
+      std::string bufferName = p->getBufferOp();
+      int bufferSlot = p->getBufferSlot();
+      std::vector<std::string> forkOutNames{numOut};
+      for (unsigned i = 0; i < numOut; ++i) {
+        forkOutNames[i] = llvm::formatv("{0}.sent_{1}", forkName, i).str();
+      }
+      std::string bufferFull =
+          llvm::formatv("{0}.full_{1}", bufferName, bufferSlot).str();
+      std::string propertyString =
+          llvm::formatv("({0}) -> {1}", llvm::join(forkOutNames, " | "),
+                        bufferFull)
+              .str();
+      data.properties[p->getId()] = {propertyString, propertyTag};
     } else {
       llvm::errs() << "Formal property Type not known\n";
       return failure();
